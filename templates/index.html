@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI TTS Avatar</title>
+  <link rel="stylesheet" href="/static/css/style.css?v={{ cache_bust }}" />
+</head>
+<body>
+  <!-- System prompt passed from server to JS -->
+  <script>window.__SYSTEM_PROMPT__ = {{ system_prompt | tojson }};</script>
+  <!-- Photo avatars data from server -->
+  <script>window.__PHOTO_AVATARS__ = {{ photo_avatars | tojson }};</script>
+
+  <div class="app">
+    <!-- ── Header ──────────────────────────────────────────────────────── -->
+    <header class="app-header">
+      <h1>AI TTS Avatar</h1>
+      <span class="subtitle">Azure Voice Live API &mdash; Real-time Avatar</span>
+    </header>
+
+    <main class="app-main">
+      <!-- ── Video + Chat Column ──────────────────────────────────────── -->
+      <section class="col-primary">
+        <!-- Avatar video area -->
+        <div class="avatar-display">
+          <div class="video-container">
+            <div id="videoPlaceholder" class="video-placeholder">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              <p>Connect to start the avatar</p>
+            </div>
+            <video id="avatarVideo" autoplay playsinline></video>
+            <audio id="avatarAudio" autoplay></audio>
+          </div>
+          <div id="statusBar" class="status-bar status-disconnected">
+            <span class="status-dot"></span>
+            <span id="statusText">Disconnected</span>
+          </div>
+        </div>
+
+        <!-- Chat area -->
+        <div class="chat-area">
+          <div id="chatMessages" class="chat-messages">
+            <div class="chat-welcome">
+              <p>Start the avatar, then type a message or use the microphone to chat.</p>
+            </div>
+          </div>
+
+          <!-- Input bar -->
+          <div class="chat-input-bar">
+            <button id="micBtn" class="btn-mic" title="Hold to speak" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Type a message..."
+              disabled
+            />
+            <button id="sendBtn" class="btn-send" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+      <aside class="col-sidebar">
+        <div class="settings-panel">
+          <h3>Avatar Settings</h3>
+
+          <label>
+            Avatar Type
+            <select id="avatarType">
+              <option value="video" selected>Video Avatar</option>
+              <option value="photo">Photo Avatar</option>
+            </select>
+          </label>
+
+          <label>
+            Character
+            <select id="characterSelect">
+              {% for char in characters %}
+              <option value="{{ char.id }}" data-styles="{{ char.styles | join(',') }}">
+                {{ char.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label id="styleLabel">
+            Style
+            <select id="styleSelect"></select>
+          </label>
+
+          <label>
+            Voice
+            <select id="voiceSelect">
+              {% for v in voices %}
+              <option value="{{ v.id }}" data-type="{{ v.type }}">{{ v.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="avatarEnabled" checked />
+            Enable Avatar (uncheck for voice-only)
+          </label>
+
+          <button id="connectBtn" class="btn-primary">Start Avatar</button>
+        </div>
+
+        <!-- Error display -->
+        <div id="errorCard" class="error-card" style="display: none;">
+          <strong>Error</strong>
+          <p id="errorText"></p>
+        </div>
+
+        <!-- Info -->
+        <div class="info-panel">
+          <h4>How to use</h4>
+          <ol>
+            <li>Select avatar character, style &amp; voice</li>
+            <li>Click <strong>Start Avatar</strong></li>
+            <li>Type a message or click the mic to speak</li>
+            <li>The AI responds through the avatar</li>
+          </ol>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js?v={{ cache_bust }}"></script>
+</body>
+</html>

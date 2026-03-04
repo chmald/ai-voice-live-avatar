@@ -10,6 +10,7 @@ Two modes:
 
 import asyncio
 import base64
+import json
 import logging
 from typing import Any, Callable, Optional
 
@@ -20,6 +21,8 @@ from azure.ai.voicelive.models import (
     AzureStandardVoice,
     AudioInputTranscriptionOptions,
     ClientEventSessionAvatarConnect,
+    FunctionCallOutputItem,
+    FunctionTool,
     InputAudioFormat,
     Modality,
     OutputAudioFormat,
@@ -31,7 +34,43 @@ from azure.ai.voicelive.models import (
     VideoParams,
 )
 
+from config import settings
+from weather_service import get_weather, get_weather_by_coords
+
 logger = logging.getLogger(__name__)
+
+# ── Tool definitions ─────────────────────────────────────────────────────────
+WEATHER_TOOL = FunctionTool(
+    name="get_weather",
+    description=(
+        "Get the current weather for a given location. "
+        "Call this whenever the user asks about weather, temperature, "
+        "or forecast for a city, region, or address. "
+        "When the user says 'my area', 'near me', 'here', or 'my location' "
+        "set use_my_location to true instead of providing a location name."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": (
+                    "City name or location, e.g. 'Seattle', 'Paris, France'. "
+                    "Omit when use_my_location is true."
+                ),
+            },
+            "use_my_location": {
+                "type": "boolean",
+                "description": (
+                    "Set to true when the user wants weather for their current "
+                    "location (e.g. 'my area', 'near me', 'here'). "
+                    "The system will use the browser's GPS coordinates."
+                ),
+            },
+        },
+        "required": [],
+    },
+)
 
 
 class VoiceSessionHandler:
@@ -65,6 +104,10 @@ class VoiceSessionHandler:
         self._avatar_enabled = config.get("avatarEnabled", True)
         self._pending_proactive = False
         self._audio_chunk_count = 0
+
+        # User location from browser geolocation (may be None)
+        self._user_lat = config.get("userLatitude")
+        self._user_lon = config.get("userLongitude")
 
     # ── Session lifecycle ────────────────────────────────────────────────
 
@@ -141,6 +184,8 @@ class VoiceSessionHandler:
             turn_detection=turn_detection,
             input_audio_noise_reduction={"type": "azure_deep_noise_suppression"},
             input_audio_echo_cancellation={"type": "server_echo_cancellation"},
+            tools=[WEATHER_TOOL] if settings.ENABLE_WEATHER_TOOL else None,
+            tool_choice="auto" if settings.ENABLE_WEATHER_TOOL else None,
         )
         logger.info(f"Sending session.update (avatar={self._avatar_enabled})")
         await connection.session.update(session=session_config)
@@ -333,6 +378,10 @@ class VoiceSessionHandler:
                     self._pending_proactive = False
                     await self._send_proactive_greeting(connection, "after avatar connect")
 
+        # ── Function calls (tool use) ────────────────────────────────────
+        elif t == ServerEventType.RESPONSE_FUNCTION_CALL_ARGUMENTS_DONE:
+            await self._handle_function_call(event, connection)
+
         # ── Errors ───────────────────────────────────────────────────────
         elif t == ServerEventType.ERROR:
             logger.error(f"Voice Live error: {event}")
@@ -401,6 +450,50 @@ class VoiceSessionHandler:
             await self.send_message({"type": "stop_playback", "reason": "manual_interrupt"})
         except Exception as e:
             logger.error(f"Error interrupting: {e}")
+
+    # ── Function-call handling ────────────────────────────────────────────
+
+    async def _handle_function_call(self, event, connection):
+        """Execute a tool and return its output to the model."""
+        name = getattr(event, "name", "")
+        call_id = getattr(event, "call_id", "")
+        raw_args = getattr(event, "arguments", "{}")
+
+        logger.info(f"Function call: {name}({raw_args})")
+
+        try:
+            args = json.loads(raw_args)
+        except json.JSONDecodeError:
+            args = {}
+
+        if name == "get_weather":
+            result = await self._handle_weather_tool(args)
+        else:
+            result = f"Unknown tool: {name}"
+
+        # Send function output back to the model
+        output_item = FunctionCallOutputItem(call_id=call_id, output=result)
+        await connection.conversation.item.create(item=output_item)
+        await connection.response.create()
+        logger.info(f"Function '{name}' result sent (len={len(result)})")
+
+    async def _handle_weather_tool(self, args: dict) -> str:
+        """Route weather tool calls to the appropriate service function."""
+        use_my_location = args.get("use_my_location", False)
+        location = args.get("location", "")
+
+        if use_my_location and self._user_lat is not None and self._user_lon is not None:
+            logger.info(f"Weather tool: using browser coords ({self._user_lat}, {self._user_lon})")
+            return await get_weather_by_coords(self._user_lat, self._user_lon)
+        elif use_my_location:
+            return (
+                "The user's browser location is not available. "
+                "Please ask them to specify a city or enable location access and reload the page."
+            )
+        elif location:
+            return await get_weather(location)
+        else:
+            return "Please provide a location name or enable browser location access."
 
     # ── Helpers ──────────────────────────────────────────────────────────
 

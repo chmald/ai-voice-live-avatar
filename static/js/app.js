@@ -49,6 +49,28 @@ let currentStatus = "disconnected";
 let sessionStarted = false;
 let currentAssistantDiv = null;
 let currentAssistantText = "";
+let userLatitude = null;
+let userLongitude = null;
+
+// ── Geolocation ─────────────────────────────────────────────────────────────
+// Request the user's location on page load so weather queries can use it.
+(function requestGeolocation() {
+  if (!navigator.geolocation) {
+    console.warn("Geolocation API not available");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLatitude = pos.coords.latitude;
+      userLongitude = pos.coords.longitude;
+      console.log(`User location: ${userLatitude}, ${userLongitude}`);
+    },
+    (err) => {
+      console.warn("Geolocation denied or unavailable:", err.message);
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+  );
+})();
 
 // System prompt injected from the server template
 const systemPrompt = window.__SYSTEM_PROMPT__ || "";
@@ -183,17 +205,20 @@ async function startSession() {
       // Send start_session with configuration for the backend to set up
       const voiceName = voiceSelect.value;
       const avatarOn = avatarToggle.checked;
-      wsSend({
-        type: "start_session",
-        config: {
-          character: characterSelect.value,
-          style: styleSelect.value || "",
-          avatarType: avatarType.value,
-          voiceName: voiceName,
-          instructions: systemPrompt,
-          avatarEnabled: avatarOn,
-        },
-      });
+      const sessionConfig = {
+        character: characterSelect.value,
+        style: styleSelect.value || "",
+        avatarType: avatarType.value,
+        voiceName: voiceName,
+        instructions: systemPrompt,
+        avatarEnabled: avatarOn,
+      };
+      // Attach user coordinates if the browser provided them
+      if (userLatitude !== null && userLongitude !== null) {
+        sessionConfig.userLatitude = userLatitude;
+        sessionConfig.userLongitude = userLongitude;
+      }
+      wsSend({ type: "start_session", config: sessionConfig });
     };
 
     ws.onmessage = (event) => {

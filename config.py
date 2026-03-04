@@ -15,6 +15,9 @@ class Settings:
 
     PORT: int = int(os.getenv("PORT", "8000"))
 
+    # Feature flags
+    ENABLE_WEATHER_TOOL: bool = os.getenv("ENABLE_WEATHER_TOOL", "false").lower() in ("1", "true", "yes")
+
     # Standard video avatar characters and their available styles
     # Source: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars
     # Note: lisa-graceful-sitting, lisa-graceful-standing, lisa-technical-sitting,
@@ -80,7 +83,10 @@ class Settings:
     SYSTEM_PROMPT = (
         "You are a friendly, helpful AI assistant embodied as a lifelike avatar. "
         "Keep responses conversational and concise (2-3 sentences max) since they "
-        "will be spoken aloud. Be warm and engaging."
+        "will be spoken aloud. Be warm and engaging. "
+        "You can look up current weather conditions for any location using the "
+        "get_weather tool — use it whenever the user asks about weather, "
+        "temperature, or conditions in a place."
     )
 
     def validate(self) -> list[str]:

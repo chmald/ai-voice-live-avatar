@@ -45,9 +45,56 @@ Browser ←─── WebRTC video/audio ───── Azure Avatar Service
 | Azure CLI | For `az login` authentication |
 | RBAC roles | **Cognitive Services User** + **Azure AI User** on your Foundry resource |
 
-### Supported regions for avatar
+## Support matrix
 
-eastus2, northeurope, southcentralus, southeastasia, swedencentral, westeurope, westus2
+This project depends on three Azure capabilities, each with its own regional footprint. **Your Foundry resource must be created in a region that supports every feature you plan to use.** Pick a region from the recommendations below based on which features you enable.
+
+### Feature → requirement
+
+| Feature in this app | Azure capability | Required? |
+|---|---|---|
+| Voice-only conversation | Voice Live API (built-in `gpt-realtime`) | Always |
+| Avatar video (Lisa, Harry, Max, Lori, Meg, etc.) | TTS Real-time Avatar | When **Enable Avatar** is on |
+| HD (Dragon) voices — e.g. `en-US-Ava:DragonHDLatestNeural` | Azure Neural HD voices | When selecting an `HD` voice |
+| Standard / Multilingual voices | Azure Neural TTS (broad coverage) | When selecting a non-HD voice |
+| BYOM (`byom-azure-openai-realtime`, `…-chat-completion`) | Azure OpenAI deployment in your Foundry resource | When `ENABLE_BYOM_MODE=true` |
+| BYOM (`byom-foundry-anthropic-messages`) | Anthropic model on Foundry (preview) | When using Claude via BYOM |
+| Weather tool | Open-Meteo (keyless, no region) | When `ENABLE_WEATHER_TOOL=true` |
+
+### Region × feature matrix
+
+✅ = supported · ❌ = not supported · ⚠️ = check docs (changes frequently)
+
+| Region | Voice Live API | TTS Avatar (real-time) | HD (Dragon) voices | Standard / Multilingual TTS |
+|---|:---:|:---:|:---:|:---:|
+| `eastus`           | ⚠️ | ❌ | ✅ | ✅ |
+| `eastus2`          | ✅ | ✅ | ✅ | ✅ |
+| `westus2`          | ✅ | ✅ | ✅ | ✅ |
+| `southcentralus`   | ⚠️ | ✅ | ❌ | ✅ |
+| `northeurope`      | ⚠️ | ✅ | ❌ | ✅ |
+| `westeurope`       | ✅ | ✅ | ✅ | ✅ |
+| `swedencentral`    | ✅ | ✅ | ✅ | ✅ |
+| `southeastasia`    | ✅ | ✅ | ✅ | ✅ |
+| `centralindia`     | ✅ | ❌ | ✅ | ✅ |
+| All other Speech regions | ❌ | ❌ | ❌ | ✅ |
+
+Sources (authoritative — verify before deploying):
+- [Azure Speech regions — Voice Live tab](https://learn.microsoft.com/azure/ai-services/speech-service/regions?tabs=voicelive)
+- [Azure Speech regions — TTS Avatar tab](https://learn.microsoft.com/azure/ai-services/speech-service/regions?tabs=ttsavatar)
+- [HD voice region availability](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts)
+- [Voice Live overview & supported models](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live)
+
+### Recommended deployments
+
+| Scenario | Recommended regions | Why |
+|---|---|---|
+| **Full featured** (avatar + HD voices + Voice Live) | `eastus2`, `westus2`, `westeurope`, `swedencentral`, `southeastasia` | Only regions that support all three at once |
+| **Voice-only, HD voices** | Any of the above, plus `eastus`, `centralindia` | HD voices without avatar |
+| **Voice-only, no HD** | Any Voice Live region | Lowest cost / broadest availability |
+| **EU data residency** | `westeurope`, `swedencentral`, `northeurope` | Data stays in EU geography |
+| **APAC** | `southeastasia` | Only APAC region with full feature parity |
+
+> Data residency: Azure Speech doesn't process or store your audio outside the region of your Foundry resource — pick a region that matches your compliance needs.
 
 ## Quick Start
 

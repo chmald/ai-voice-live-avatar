@@ -385,7 +385,20 @@ class VoiceSessionHandler:
         elif t == ServerEventType.INPUT_AUDIO_BUFFER_SPEECH_STOPPED:
             await self.send_message({"type": "speech_stopped"})
 
-        # ── User transcription ───────────────────────────────────────────
+        # ── User transcription ───────────────────────────────────────────────
+        elif t == ServerEventType.CONVERSATION_ITEM_INPUT_AUDIO_TRANSCRIPTION_DELTA:
+            # Streaming partial user transcript — lets the UI show text as the user speaks.
+            delta = getattr(event, "delta", "")
+            if delta:
+                item_id = getattr(event, "item_id", "") or getattr(event, "itemId", "")
+                await self.send_message({
+                    "type": "transcript_delta",
+                    "role": "user",
+                    "delta": delta,
+                    "itemId": item_id,
+                })
+            return  # skip logging for high-frequency deltas
+
         elif t == ServerEventType.CONVERSATION_ITEM_INPUT_AUDIO_TRANSCRIPTION_COMPLETED:
             transcript = getattr(event, "transcript", "")
             if transcript:

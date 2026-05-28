@@ -49,6 +49,8 @@ let currentStatus = "disconnected";
 let sessionStarted = false;
 let currentAssistantDiv = null;
 let currentAssistantText = "";
+let currentUserDiv = null;
+let currentUserText = "";
 let userLatitude = null;
 let userLongitude = null;
 
@@ -303,12 +305,14 @@ async function handleServerMessage(msg) {
     case "transcript_delta":
       if (msg.role === "assistant" && msg.delta) {
         appendAssistantDelta(msg.delta);
+      } else if (msg.role === "user" && msg.delta) {
+        appendUserDelta(msg.delta);
       }
       break;
 
     case "transcript_done":
       if (msg.role === "user" && msg.transcript) {
-        addMessage("user", msg.transcript);
+        finalizeUserMessage(msg.transcript);
       } else if (msg.role === "assistant") {
         finalizeAssistantMessage();
       }
@@ -479,6 +483,34 @@ function finalizeAssistantMessage() {
   currentAssistantText = "";
 }
 
+function appendUserDelta(delta) {
+  if (!currentUserDiv) {
+    const welcome = chatMessages.querySelector(".chat-welcome");
+    if (welcome) welcome.remove();
+
+    currentUserDiv = document.createElement("div");
+    currentUserDiv.className = "chat-msg user streaming";
+    chatMessages.appendChild(currentUserDiv);
+    currentUserText = "";
+  }
+  currentUserText += delta;
+  currentUserDiv.textContent = currentUserText;
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function finalizeUserMessage(fullTranscript) {
+  // Replace partial deltas with the authoritative completed transcript
+  // (the deltas can be slightly off vs. the final result).
+  if (currentUserDiv) {
+    currentUserDiv.textContent = fullTranscript;
+    currentUserDiv.classList.remove("streaming");
+  } else {
+    addMessage("user", fullTranscript);
+  }
+  currentUserDiv = null;
+  currentUserText = "";
+}
+
 // ── Send text message ───────────────────────────────────────────────────────
 function sendTextMessage(text) {
   if (!text.trim() || !ws) return;
@@ -576,6 +608,8 @@ async function endSession() {
   sessionStarted = false;
   currentAssistantDiv = null;
   currentAssistantText = "";
+  currentUserDiv = null;
+  currentUserText = "";
 
   setStatus("disconnected");
   clearError();

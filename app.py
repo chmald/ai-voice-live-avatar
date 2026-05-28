@@ -136,10 +136,18 @@ async def _start_session(cid: str, config: dict, ws: WebSocket):
         except Exception as e:
             logger.error(f"Send to {cid} failed: {e}")
 
+    # BYOM: when enabled, the BYOM deployment name *replaces* the model query param,
+    # and the BYOM profile + (optional) cross-resource override are added as query params.
+    use_byom = settings.ENABLE_BYOM_MODE and bool(settings.VOICE_BYOM_MODEL)
+    if settings.ENABLE_BYOM_MODE and not settings.VOICE_BYOM_MODEL:
+        logger.warning("ENABLE_BYOM_MODE is true but VOICE_BYOM_MODEL is empty — falling back to VOICE_LIVE_MODEL.")
+
     handler = VoiceSessionHandler(
         client_id=cid,
         endpoint=settings.AZURE_AI_ENDPOINT,
-        model=settings.VOICE_LIVE_MODEL,
+        model=settings.VOICE_BYOM_MODEL if use_byom else settings.VOICE_LIVE_MODEL,
+        byom_mode=settings.VOICE_BYOM_MODE if use_byom else None,
+        foundry_resource_override=settings.VOICE_BYOM_FOUNDRY_RESOURCE_OVERRIDE or None,
         credential=credential,
         send_message=_send,
         config=config,

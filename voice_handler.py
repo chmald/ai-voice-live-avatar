@@ -91,6 +91,8 @@ class VoiceSessionHandler:
         credential: Any,
         send_message: Callable,
         config: dict,
+        byom_mode: str | None = None,
+        foundry_resource_override: str | None = None,
     ):
         self.client_id = client_id
         self.endpoint = endpoint
@@ -98,6 +100,12 @@ class VoiceSessionHandler:
         self.credential = credential
         self.send_message = send_message
         self.config = config
+
+        # Optional BYOM (Bring Your Own Model) — adds `profile` (and optionally
+        # `foundry-resource-override`) as query params to the Voice Live WebSocket URL.
+        # The `model` arg above is already the BYOM deployment name when BYOM is enabled.
+        self.byom_mode = byom_mode
+        self.foundry_resource_override = foundry_resource_override
 
         self.connection = None
         self.is_running = False
@@ -117,10 +125,24 @@ class VoiceSessionHandler:
             self.is_running = True
             logger.info(f"Connecting — endpoint={self.endpoint}, model={self.model}")
 
+            # BYOM query parameters. NOTE: the service expects HYPHENATED keys
+            # (`profile`, `foundry-resource-override`), and these are URL-encoded
+            # verbatim by the SDK from the `query=` mapping.
+            query_params: dict | None = None
+            if self.byom_mode:
+                query_params = {"profile": self.byom_mode}
+                if self.foundry_resource_override:
+                    query_params["foundry-resource-override"] = self.foundry_resource_override
+                logger.info(
+                    f"BYOM enabled — profile={self.byom_mode}, deployment={self.model}, "
+                    f"foundry-resource-override={self.foundry_resource_override or '(none)'}"
+                )
+
             async with connect(
                 endpoint=self.endpoint,
                 credential=self.credential,
                 model=self.model,
+                query=query_params,
             ) as connection:
                 self.connection = connection
                 await self._setup_session(connection)

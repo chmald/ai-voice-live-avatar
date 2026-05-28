@@ -11,12 +11,24 @@ class Settings:
 
     # Azure AI / Microsoft Foundry resource (Voice Live API)
     AZURE_AI_ENDPOINT: str = os.getenv("AZURE_AI_ENDPOINT", "")
-    VOICE_LIVE_MODEL: str = os.getenv("VOICE_LIVE_MODEL", "gpt-4o-realtime")
+    VOICE_LIVE_MODEL: str = os.getenv("VOICE_LIVE_MODEL", "gpt-realtime")
+
+    # Optional BYOM (Bring Your Own Model) configuration.
+    # See: https://learn.microsoft.com/azure/ai-services/speech-service/how-to-bring-your-own-model
+    #   VOICE_BYOM_MODE  — profile: byom-azure-openai-realtime |
+    #                       byom-azure-openai-chat-completion |
+    #                       byom-foundry-anthropic-messages
+    #   VOICE_BYOM_MODEL — your Foundry *deployment name* (overrides VOICE_LIVE_MODEL when BYOM is on)
+    #   VOICE_BYOM_FOUNDRY_RESOURCE_OVERRIDE — optional cross-resource override (resource name only, no domain)
+    VOICE_BYOM_MODE: str = os.getenv("VOICE_BYOM_MODE", "byom-azure-openai-realtime")
+    VOICE_BYOM_MODEL: str = os.getenv("VOICE_BYOM_MODEL", "")
+    VOICE_BYOM_FOUNDRY_RESOURCE_OVERRIDE: str = os.getenv("VOICE_BYOM_FOUNDRY_RESOURCE_OVERRIDE", "")
 
     PORT: int = int(os.getenv("PORT", "8000"))
 
     # Feature flags
     ENABLE_WEATHER_TOOL: bool = os.getenv("ENABLE_WEATHER_TOOL", "false").lower() in ("1", "true", "yes")
+    ENABLE_BYOM_MODE: bool = os.getenv("ENABLE_BYOM_MODE", "false").lower() in ("1", "true", "yes")
 
     # Standard video avatar characters and their available styles
     # Source: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars
@@ -84,10 +96,14 @@ class Settings:
         "You are a friendly, helpful AI assistant embodied as a lifelike avatar. "
         "Keep responses conversational and concise (2-3 sentences max) since they "
         "will be spoken aloud. Be warm and engaging. "
-        "You can look up current weather conditions for any location using the "
-        "get_weather tool — use it whenever the user asks about weather, "
-        "temperature, or conditions in a place."
     )
+
+    if ENABLE_WEATHER_TOOL:
+        SYSTEM_PROMPT += (
+            "You can look up current weather conditions for any location using the "
+            "get_weather tool — use it whenever the user asks about weather, "
+            "temperature, or conditions in a place."
+        )
 
     def validate(self) -> list[str]:
         """Return a list of missing required configuration keys."""

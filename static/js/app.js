@@ -142,14 +142,15 @@ const videoCharacterOptions = characterSelect.innerHTML;
 function populateCharacters() {
   const type = avatarType.value;
   if (type === "photo") {
-    // Photo avatars — no styles
+    // Photo avatars — no styles. Pre-select the configured default.
+    const defaultId = window.__DEFAULT_PHOTO_CHARACTER__ || "";
     characterSelect.innerHTML = photoAvatars
-      .map((a) => `<option value="${a.id}">${a.name}</option>`)
+      .map((a) => `<option value="${a.id}"${a.id === defaultId ? " selected" : ""}>${a.name}</option>`)
       .join("");
     styleSelect.innerHTML = "";
     styleLabel.style.display = "none";
   } else {
-    // Video avatars — restore original options
+    // Video avatars — restore original options (default already marked in HTML)
     characterSelect.innerHTML = videoCharacterOptions;
     styleLabel.style.display = "";
     populateStyles();
@@ -158,11 +159,18 @@ function populateCharacters() {
 
 function populateStyles() {
   const selected = characterSelect.selectedOptions[0];
-  if (!selected || !selected.dataset.styles) {
+  const styles = (selected && selected.dataset.styles)
+    ? selected.dataset.styles.split(",").filter(Boolean)
+    : [];
+
+  if (styles.length === 0) {
+    // Avatar has no style variants — hide the dropdown entirely
     styleSelect.innerHTML = "";
+    styleLabel.style.display = "none";
     return;
   }
-  const styles = selected.dataset.styles.split(",");
+
+  styleLabel.style.display = "";
   styleSelect.innerHTML = styles
     .map((s) => `<option value="${s}">${s}</option>`)
     .join("");

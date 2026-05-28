@@ -11,6 +11,8 @@
   <script>window.__SYSTEM_PROMPT__ = {{ system_prompt | tojson }};</script>
   <!-- Photo avatars data from server -->
   <script>window.__PHOTO_AVATARS__ = {{ photo_avatars | tojson }};</script>
+  <!-- Default photo character (used when user switches to photo avatar type) -->
+  <script>window.__DEFAULT_PHOTO_CHARACTER__ = {{ default_photo_character | tojson }};</script>
 
   <div class="app">
     <!-- ── Header ──────────────────────────────────────────────────────── -->
@@ -91,7 +93,7 @@
             Character
             <select id="characterSelect">
               {% for char in characters %}
-              <option value="{{ char.id }}" data-styles="{{ char.styles | join(',') }}">
+              <option value="{{ char.id }}" data-styles="{{ char.styles | join(',') }}"{% if char.id == default_video_character %} selected{% endif %}>
                 {{ char.name }}
               </option>
               {% endfor %}
@@ -107,7 +109,7 @@
             Voice
             <select id="voiceSelect">
               {% for v in voices %}
-              <option value="{{ v.id }}" data-type="{{ v.type }}">{{ v.name }}</option>
+              <option value="{{ v.id }}" data-type="{{ v.type }}"{% if v.id == default_voice %} selected{% endif %}>{{ v.name }}</option>
               {% endfor %}
             </select>
           </label>

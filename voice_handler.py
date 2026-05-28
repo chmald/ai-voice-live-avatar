@@ -261,11 +261,13 @@ class VoiceSessionHandler:
                 codec="h264",
                 crop=VideoCrop(top_left=[560, 0], bottom_right=[1360, 1080]),
             )
-            avatar = AvatarConfig(
-                character=character,
-                style=cfg.get("style", "casual-sitting"),
-                video=video,
-            )
+            # Style is optional — some video avatars (Rowan, Celine, Nia, Malik)
+            # have no style variants. Omit the field entirely in that case.
+            avatar_kwargs: dict = {"character": character, "video": video}
+            style = cfg.get("style")
+            if style:
+                avatar_kwargs["style"] = style
+            avatar = AvatarConfig(**avatar_kwargs)
         avatar["output_protocol"] = "webrtc"  # not in SDK model — bracket notation
         if avatar_type == "photo":
             avatar["scene"] = {

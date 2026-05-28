@@ -26,22 +26,33 @@ class Settings:
 
     PORT: int = int(os.getenv("PORT", "8000"))
 
+    # UI defaults (must match an entry in AVATAR_CHARACTERS / PHOTO_AVATARS / VOICES below)
+    DEFAULT_VIDEO_CHARACTER: str = os.getenv("DEFAULT_VIDEO_CHARACTER", "lisa")
+    DEFAULT_PHOTO_CHARACTER: str = os.getenv("DEFAULT_PHOTO_CHARACTER", "isabella")
+    DEFAULT_VOICE: str = os.getenv("DEFAULT_VOICE", "en-US-Ava:DragonHDLatestNeural")
+
     # Feature flags
     ENABLE_WEATHER_TOOL: bool = os.getenv("ENABLE_WEATHER_TOOL", "false").lower() in ("1", "true", "yes")
     ENABLE_BYOM_MODE: bool = os.getenv("ENABLE_BYOM_MODE", "false").lower() in ("1", "true", "yes")
 
-    # Standard video avatar characters and their available styles
-    # Source: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars
-    # Note: lisa-graceful-sitting, lisa-graceful-standing, lisa-technical-sitting,
-    # and lisa-technical-standing are NOT supported via the real-time API.
-    # Source: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars
+    # Standard video avatar characters and their available styles.
+    # Source: https://learn.microsoft.com/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars
+    #
+    # Notes:
+    #   - Rowan, Celine, Nia, Malik have no style variants (single appearance).
+    #   - Lisa's other styles (graceful-sitting/standing, technical-sitting/standing)
+    #     are NOT supported via the real-time API — only `casual-sitting` is listed.
+    #   - Jeff is being retired (Dec 2026) and is omitted.
     AVATAR_CHARACTERS = [
+        {"id": "rowan", "name": "Rowan", "styles": []},
+        {"id": "celine", "name": "Celine", "styles": []},
+        {"id": "nia", "name": "Nia", "styles": []},
+        {"id": "malik", "name": "Malik", "styles": []},
         {"id": "harry", "name": "Harry", "styles": ["business", "casual", "youthful"]},
-        {"id": "jeff", "name": "Jeff", "styles": ["business", "formal"]},
         {"id": "lisa", "name": "Lisa", "styles": ["casual-sitting"]},
         {"id": "lori", "name": "Lori", "styles": ["casual", "graceful", "formal"]},
         {"id": "max", "name": "Max", "styles": ["business", "casual", "formal"]},
-        {"id": "meg", "name": "Meg", "styles": ["formal", "casual", "business"]},
+        {"id": "meg", "name": "Meg", "styles": ["business", "casual", "formal"]},
     ]
 
     # Standard photo avatars (no styles — single appearance per character)
@@ -79,23 +90,55 @@ class Settings:
         {"id": "zoe", "name": "Zoe"},
     ]
 
-    # Available TTS voices (Azure standard + HD voices for Voice Live)
+    # English-only TTS voices for Voice Live.
+    # Source: https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts
+    #
+    # Tiers (all use voice.type = "azure-standard" per Voice Live spec):
+    #   - HD (Dragon) — highest quality, most natural. Limited to regions:
+    #       eastus, eastus2, westus2, westeurope, swedencentral, centralindia, southeastasia
+    #   - Multilingual — can speak many languages with the same voice persona.
+    #   - Standard — classic neural voices, broad regional coverage.
     VOICES = [
-        {"id": "en-US-Ava:DragonHDLatestNeural", "name": "Ava HD", "type": "azure-standard"},
-        {"id": "en-US-AvaMultilingualNeural", "name": "Ava (Multilingual)", "type": "azure-standard"},
-        {"id": "en-US-AndrewMultilingualNeural", "name": "Andrew (Multilingual)", "type": "azure-standard"},
-        {"id": "en-US-EmmaMultilingualNeural", "name": "Emma (Multilingual)", "type": "azure-standard"},
-        {"id": "en-US-BrianMultilingualNeural", "name": "Brian (Multilingual)", "type": "azure-standard"},
-        {"id": "en-US-JennyNeural", "name": "Jenny", "type": "azure-standard"},
-        {"id": "en-US-GuyNeural", "name": "Guy", "type": "azure-standard"},
-        {"id": "en-GB-SoniaNeural", "name": "Sonia (UK)", "type": "azure-standard"},
-        {"id": "en-GB-RyanNeural", "name": "Ryan (UK)", "type": "azure-standard"},
+        # ── US English — HD (Dragon) ──
+        {"id": "en-US-Ava:DragonHDLatestNeural",     "name": "Ava HD (US, F)",     "type": "azure-standard"},
+        {"id": "en-US-Andrew:DragonHDLatestNeural",  "name": "Andrew HD (US, M)",  "type": "azure-standard"},
+        {"id": "en-US-Brian:DragonHDLatestNeural",   "name": "Brian HD (US, M)",   "type": "azure-standard"},
+        {"id": "en-US-Davis:DragonHDLatestNeural",   "name": "Davis HD (US, M)",   "type": "azure-standard"},
+        {"id": "en-US-Emma:DragonHDLatestNeural",    "name": "Emma HD (US, F)",    "type": "azure-standard"},
+        {"id": "en-US-Aria:DragonHDLatestNeural",    "name": "Aria HD (US, F)",    "type": "azure-standard"},
+        {"id": "en-US-Jenny:DragonHDLatestNeural",   "name": "Jenny HD (US, F)",   "type": "azure-standard"},
+        {"id": "en-US-Nova:DragonHDLatestNeural",    "name": "Nova HD (US, F)",    "type": "azure-standard"},
+        {"id": "en-US-Steffan:DragonHDLatestNeural", "name": "Steffan HD (US, M)", "type": "azure-standard"},
+        # ── UK English — HD (Dragon) ──
+        {"id": "en-GB-Ada:DragonHDLatestNeural",     "name": "Ada HD (UK, F)",     "type": "azure-standard"},
+        {"id": "en-GB-Ollie:DragonHDLatestNeural",   "name": "Ollie HD (UK, M)",   "type": "azure-standard"},
+        # ── Multilingual (can switch languages mid-utterance) ──
+        {"id": "en-US-AvaMultilingualNeural",        "name": "Ava (US, F, Multilingual)",     "type": "azure-standard"},
+        {"id": "en-US-AndrewMultilingualNeural",    "name": "Andrew (US, M, Multilingual)",  "type": "azure-standard"},
+        {"id": "en-US-EmmaMultilingualNeural",      "name": "Emma (US, F, Multilingual)",    "type": "azure-standard"},
+        {"id": "en-US-BrianMultilingualNeural",     "name": "Brian (US, M, Multilingual)",   "type": "azure-standard"},
+        {"id": "en-GB-AdaMultilingualNeural",       "name": "Ada (UK, F, Multilingual)",     "type": "azure-standard"},
+        {"id": "en-GB-OllieMultilingualNeural",     "name": "Ollie (UK, M, Multilingual)",   "type": "azure-standard"},
+        # ── Standard regional ──
+        {"id": "en-US-JennyNeural",                  "name": "Jenny (US, F)",      "type": "azure-standard"},
+        {"id": "en-US-GuyNeural",                   "name": "Guy (US, M)",        "type": "azure-standard"},
+        {"id": "en-GB-SoniaNeural",                 "name": "Sonia (UK, F)",      "type": "azure-standard"},
+        {"id": "en-GB-RyanNeural",                  "name": "Ryan (UK, M)",       "type": "azure-standard"},
+        {"id": "en-AU-NatashaNeural",               "name": "Natasha (AU, F)",    "type": "azure-standard"},
+        {"id": "en-AU-WilliamNeural",               "name": "William (AU, M)",    "type": "azure-standard"},
+        {"id": "en-IE-EmilyNeural",                 "name": "Emily (IE, F)",      "type": "azure-standard"},
+        {"id": "en-IE-ConnorNeural",                "name": "Connor (IE, M)",     "type": "azure-standard"},
+        {"id": "en-CA-ClaraNeural",                 "name": "Clara (CA, F)",      "type": "azure-standard"},
+        {"id": "en-CA-LiamNeural",                  "name": "Liam (CA, M)",       "type": "azure-standard"},
     ]
 
     SYSTEM_PROMPT = (
         "You are a friendly, helpful AI assistant embodied as a lifelike avatar. "
         "Keep responses conversational and concise (2-3 sentences max) since they "
         "will be spoken aloud. Be warm and engaging. "
+        "Always begin the conversation in English (en-US). If the user later "
+        "speaks or asks you to switch to another language, you may follow their "
+        "lead \u2014 but the initial greeting and any unsolicited response must be in English. "
     )
 
     if ENABLE_WEATHER_TOOL:
